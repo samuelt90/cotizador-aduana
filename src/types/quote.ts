@@ -1,0 +1,15 @@
+export type QuoteMethod = "vin" | "sat";
+
+export type ScreenState = "method" | "form" | "loading" | "result";
+
+export type QuoteResult = {
+  auctionValueGTQ: number;
+  satBaseGTQ: number;
+  auctionBaseGTQ: number;
+  ivaAuction: number;
+  iprimaAuction: number;
+  totalAuction: number;
+  ivaSat: number;
+  iprimaSat: number;
+  totalSat: number;
+};

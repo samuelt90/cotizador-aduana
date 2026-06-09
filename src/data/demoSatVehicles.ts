@@ -1,0 +1,51 @@
+import type { Vehicle } from "@/types/vehicle";
+
+export const demoVehicles: Vehicle[] = [
+  {
+    id: "camaro-2015",
+    type: "Automóvil",
+    brand: "Chevrolet",
+    line: "Camaro LT",
+    year: 2015,
+    engineCc: 3600,
+    fuel: "Gasolina",
+    seats: 4,
+    satDescription: "AUTOMOVIL CHEVROLET CAMARO LT 3600 · GA · 4 asientos",
+    satValueGTQ: 57210.02,
+    iprimaRate: 0.2,
+    plateFee: 75,
+    icon: "car",
+  },
+  {
+    id: "mazda-cx5-2018",
+    type: "Camioneta",
+    brand: "Mazda",
+    line: "CX-5",
+    year: 2018,
+    engineCc: 2500,
+    fuel: "Gasolina",
+    seats: 5,
+    satDescription: "CAMIONETA MAZDA CX-5 2500 · GA · 5 asientos",
+    satValueGTQ: 92500,
+    iprimaRate: 0.15,
+    plateFee: 75,
+    icon: "car",
+  },
+  {
+    id: "honda-navi-2020",
+    type: "Motocicleta",
+    brand: "Honda",
+    line: "Navi",
+    year: 2020,
+    engineCc: 109,
+    fuel: "Gasolina",
+    seats: 2,
+    satDescription: "MOTO HONDA NAVI 109 · GA",
+    satValueGTQ: 6225.95,
+    iprimaRate: 0.1,
+    plateFee: 30,
+    icon: "bike",
+  },
+];
+
+export const vehicleTypes = ["Automóvil", "Camioneta", "Motocicleta"];
