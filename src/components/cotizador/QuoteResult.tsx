@@ -1,11 +1,14 @@
-import { AlertTriangle, Car } from "lucide-react";
+import { AlertTriangle, Car, FileCheck2, FileQuestion } from "lucide-react";
 
 import { DetailBox } from "@/components/cotizador/DetailBox";
 import { EstimateCard } from "@/components/cotizador/EstimateCard";
 import { formatGTQ, formatUSD } from "@/lib/formatters";
-import type { QuoteMethod } from "@/types/quote";
+import type {
+  QuoteMethod,
+  QuoteResult as QuoteResultType,
+  SupportingDocumentStatus,
+} from "@/types/quote";
 import type { Vehicle } from "@/types/vehicle";
-import type { QuoteResult as QuoteResultType } from "@/types/quote";
 
 type QuoteResultProps = {
   method: QuoteMethod | null;
@@ -14,6 +17,7 @@ type QuoteResultProps = {
   auctionValueUSD: number;
   quote: QuoteResultType;
   lowestEstimate: number;
+  supportingDocument: SupportingDocumentStatus;
 };
 
 export function QuoteResult({
@@ -23,7 +27,10 @@ export function QuoteResult({
   auctionValueUSD,
   quote,
   lowestEstimate,
+  supportingDocument,
 }: QuoteResultProps) {
+  const hasSupportingDocument = supportingDocument === "yes";
+
   return (
     <div className="animate-[fadeUp_0.45s_ease-out]">
       <div className="rounded-[2rem] border border-cyan-300/20 bg-cyan-300/10 p-6">
@@ -54,17 +61,71 @@ export function QuoteResult({
         </div>
       </div>
 
+      <div
+        className={`mt-6 rounded-[1.7rem] border p-5 ${
+          hasSupportingDocument
+            ? "border-emerald-300/20 bg-emerald-300/10"
+            : "border-amber-300/20 bg-amber-300/10"
+        }`}
+      >
+        <div className="flex gap-3">
+          <div
+            className={`mt-1 shrink-0 ${
+              hasSupportingDocument ? "text-emerald-200" : "text-amber-200"
+            }`}
+          >
+            {hasSupportingDocument ? (
+              <FileCheck2 size={21} />
+            ) : (
+              <FileQuestion size={21} />
+            )}
+          </div>
+
+          <div>
+            <p
+              className={`font-black ${
+                hasSupportingDocument ? "text-emerald-100" : "text-amber-100"
+              }`}
+            >
+              {hasSupportingDocument
+                ? "El cliente indica que sí tiene respaldo documental."
+                : "El cliente indica que no tiene respaldo documental."}
+            </p>
+
+            <p
+              className={`mt-2 text-sm leading-6 ${
+                hasSupportingDocument
+                  ? "text-emerald-100/80"
+                  : "text-amber-100/80"
+              }`}
+            >
+              {hasSupportingDocument
+                ? "El escenario con valor de compra o subasta puede aplicar si Ronaldo valida el invoice, documento de subasta o respaldo correspondiente."
+                : "El valor de compra ingresado queda como referencia informativa. Ronaldo deberá validar si corresponde usar la referencia de tabla SAT para el caso real."}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <EstimateCard
           title="Escenario con valor compra/subasta"
-          subtitle={`Valor ingresado: ${formatUSD(auctionValueUSD)}`}
+          subtitle={
+            hasSupportingDocument
+              ? `Valor respaldado por validar: ${formatUSD(auctionValueUSD)}`
+              : `Valor informativo ingresado: ${formatUSD(auctionValueUSD)}`
+          }
           total={formatGTQ(quote.totalAuction)}
           base={formatGTQ(quote.auctionBaseGTQ)}
         />
 
         <EstimateCard
           title="Escenario con referencia SAT"
-          subtitle="Valor tomado de tabla SAT"
+          subtitle={
+            hasSupportingDocument
+              ? "Comparación contra referencia fiscal"
+              : "Referencia principal si no hay respaldo documental"
+          }
           total={formatGTQ(quote.totalSat)}
           base={formatGTQ(quote.satBaseGTQ)}
         />

@@ -1,19 +1,24 @@
-import { EXCHANGE_RATE } from "@/lib/quoteCalculator";
 import { StepHeader } from "@/components/cotizador/StepHeader";
 import { InputPanel } from "@/components/ui/InputPanel";
+import { EXCHANGE_RATE } from "@/lib/quoteCalculator";
+import type { SupportingDocumentStatus } from "@/types/quote";
 
 type VinQuoteFormProps = {
   vin: string;
   auctionValueUSD: string;
+  supportingDocument: SupportingDocumentStatus;
   onChangeVin: (value: string) => void;
   onChangeAuctionValueUSD: (value: string) => void;
+  onChangeSupportingDocument: (value: SupportingDocumentStatus) => void;
 };
 
 export function VinQuoteForm({
   vin,
   auctionValueUSD,
+  supportingDocument,
   onChangeVin,
   onChangeAuctionValueUSD,
+  onChangeSupportingDocument,
 }: VinQuoteFormProps) {
   return (
     <div className="animate-[fadeUp_0.45s_ease-out]">
@@ -54,6 +59,41 @@ export function VinQuoteForm({
             <span className="text-xs font-bold text-slate-500">USD</span>
           </div>
         </InputPanel>
+
+        <div className="rounded-[1.7rem] border border-white/10 bg-white/[0.06] p-5">
+          <p className="text-sm font-black text-white">
+            ¿Tienes documento que respalde ese valor?
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-slate-400">
+            Puede ser invoice, documento de subasta u otro respaldo que Ronaldo
+            pueda revisar.
+          </p>
+
+          <div className="mt-4 grid gap-3">
+            <button
+              onClick={() => onChangeSupportingDocument("yes")}
+              className={`rounded-[1.4rem] border px-5 py-4 text-left text-sm font-black transition ${
+                supportingDocument === "yes"
+                  ? "border-cyan-300/70 bg-cyan-300/10 text-white"
+                  : "border-white/10 bg-slate-950/40 text-slate-300"
+              }`}
+            >
+              Sí, tengo documento de respaldo
+            </button>
+
+            <button
+              onClick={() => onChangeSupportingDocument("no")}
+              className={`rounded-[1.4rem] border px-5 py-4 text-left text-sm font-black transition ${
+                supportingDocument === "no"
+                  ? "border-cyan-300/70 bg-cyan-300/10 text-white"
+                  : "border-white/10 bg-slate-950/40 text-slate-300"
+              }`}
+            >
+              No, solo quiero una estimación
+            </button>
+          </div>
+        </div>
 
         <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-sm leading-6 text-slate-400">
           Tipo de cambio demo:{" "}

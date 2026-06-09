@@ -11,7 +11,7 @@ import { faqItems } from "@/data/faqItems";
 import { loadingSteps } from "@/data/loadingSteps";
 import { calculateQuote} from "@/lib/quoteCalculator";
 import { buildWhatsappUrl } from "@/lib/whatsapp";
-import type { QuoteMethod, ScreenState } from "@/types/quote";
+import type { QuoteMethod, ScreenState, SupportingDocumentStatus } from "@/types/quote";
 import { WelcomeHero } from "@/components/cotizador/WelcomeHero";
 import { QuoteMethodSelector } from "@/components/cotizador/QuoteMethodSelector";
 import { StickyBottomBar } from "@/components/cotizador/StickyBottomBar";
@@ -25,6 +25,9 @@ import { QuoteResult } from "@/components/cotizador/QuoteResult";
 export default function Home() {
   const [screen, setScreen] = useState<ScreenState>("method");
   const [method, setMethod] = useState<QuoteMethod | null>(null);
+
+  const [supportingDocument, setSupportingDocument] =
+  useState<SupportingDocumentStatus>(null);
 
   const [vin, setVin] = useState("");
   const [auctionValueUSD, setAuctionValueUSD] = useState("3750");
@@ -83,9 +86,9 @@ export default function Home() {
   const canContinueFromMethod = method !== null;
 
   const canCalculate =
-    method === "vin"
-      ? vin.trim().length >= 5 && parsedAuctionValueUSD > 0
-      : selectedVehicleId !== "" && parsedAuctionValueUSD > 0;
+  parsedAuctionValueUSD > 0 &&
+  supportingDocument !== null &&
+  (method === "vin" ? vin.trim().length > 0 : selectedVehicleId.length > 0);
 
   useEffect(() => {
     if (screen !== "loading") return;
@@ -112,6 +115,7 @@ export default function Home() {
 
   function selectMethod(selectedMethod: QuoteMethod) {
     setMethod(selectedMethod);
+    setSupportingDocument(null);
   }
 
   function continueToForm() {
@@ -143,6 +147,7 @@ export default function Home() {
     selectedVehicle,
     auctionValueUSD: parsedAuctionValueUSD,
     quote,
+    supportingDocument,
   });
 
   return (
@@ -200,32 +205,37 @@ export default function Home() {
           <VinQuoteForm
             vin={vin}
             auctionValueUSD={auctionValueUSD}
+            supportingDocument={supportingDocument}
             onChangeVin={setVin}
             onChangeAuctionValueUSD={setAuctionValueUSD}
+            onChangeSupportingDocument={setSupportingDocument}
           />
         )}
         {screen === "form" && method === "sat" && (
-          <SatSearchForm
-            vehicleTypes={vehicleTypes}
-            availableBrands={availableBrands}
-            availableVehicles={availableVehicles}
-            selectedType={selectedType}
-            selectedBrand={selectedBrand}
-            selectedVehicleId={selectedVehicleId}
-            selectedVehicle={selectedVehicle}
-            auctionValueUSD={auctionValueUSD}
-            onSelectType={(value) => {
-              setSelectedType(value);
-              setSelectedBrand("");
-              setSelectedVehicleId("");
-            }}
-            onSelectBrand={(value) => {
-              setSelectedBrand(value);
-              setSelectedVehicleId("");
-            }}
-            onSelectVehicle={setSelectedVehicleId}
-            onChangeAuctionValueUSD={setAuctionValueUSD}
-          />
+       <SatSearchForm
+          vehicleTypes={vehicleTypes}
+          availableBrands={availableBrands}
+          availableVehicles={availableVehicles}
+          selectedType={selectedType}
+          selectedBrand={selectedBrand}
+          selectedVehicleId={selectedVehicleId}
+          selectedVehicle={selectedVehicle}
+          auctionValueUSD={auctionValueUSD}
+          supportingDocument={supportingDocument}
+          onSelectType={(value) => {
+            setSelectedType(value);
+            setSelectedBrand("");
+            setSelectedVehicleId("");
+          }}
+          onSelectBrand={(value) => {
+            setSelectedBrand(value);
+            setSelectedVehicleId("");
+          }}
+          onSelectVehicle={setSelectedVehicleId}
+          onChangeAuctionValueUSD={setAuctionValueUSD}
+          onChangeSupportingDocument={setSupportingDocument}
+        />
+
         )}
 
         {screen === "loading" && (
@@ -235,7 +245,7 @@ export default function Home() {
           />
         )}
 
-      {screen === "result" && quote && (
+     {screen === "result" && quote && (
         <QuoteResult
           method={method}
           vin={vin}
@@ -243,6 +253,7 @@ export default function Home() {
           auctionValueUSD={parsedAuctionValueUSD}
           quote={quote}
           lowestEstimate={lowestEstimate}
+          supportingDocument={supportingDocument}
         />
       )}
       </section>
