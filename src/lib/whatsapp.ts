@@ -21,15 +21,35 @@ type BuildWhatsappUrlParams = {
 function getSupportingDocumentLabel(
   supportingDocument: SupportingDocumentStatus
 ) {
-  if (supportingDocument === "yes") {
-    return "Sí, indica que tiene invoice/subasta/documento de respaldo";
-  }
-
-  if (supportingDocument === "no") {
-    return "No, solo solicita estimación preliminar";
-  }
-
+  if (supportingDocument === "yes") return "Sí";
+  if (supportingDocument === "no") return "No";
   return "No indicado";
+}
+
+function getMainCalculation({
+  quote,
+  supportingDocument,
+}: {
+  quote: QuoteResult;
+  supportingDocument: SupportingDocumentStatus;
+}) {
+  if (supportingDocument === "yes") {
+    return {
+      baseLabel: "Valor compra/subasta documentado",
+      baseValue: quote.auctionBaseGTQ,
+      estimatedTaxesAndFees: quote.totalAuction,
+      partialTotal: quote.auctionBaseGTQ + quote.totalAuction,
+      observation: "Quiero confirmar si el documento aplica para este caso.",
+    };
+  }
+
+  return {
+    baseLabel: "Tabla SAT",
+    baseValue: quote.satBaseGTQ,
+    estimatedTaxesAndFees: quote.totalSat,
+    partialTotal: quote.satBaseGTQ + quote.totalSat,
+    observation: "Quiero confirmar el monto para este caso.",
+  };
 }
 
 export function buildWhatsappUrl({
@@ -41,24 +61,30 @@ export function buildWhatsappUrl({
   quote,
   supportingDocument,
 }: BuildWhatsappUrlParams) {
-  const methodLabel =
-    method === "vin" ? "Cotización por VIN" : "Cotización por tabla SAT";
+  const mainCalculation = getMainCalculation({
+    quote,
+    supportingDocument,
+  });
 
   const compactMessage = encodeURIComponent(
-    `Hola Ronaldo, quiero confirmar esta cotización aduanera.\n\n` +
-      `Nombre: ${customerName || "Sin nombre"}\n` +
-      `Tipo de consulta: ${methodLabel}\n` +
-      `${method === "vin" ? `VIN: ${vin || "VIN pendiente"}\n` : ""}` +
+    `Hola Ronaldo, quiero validar esta cotización aduanera.\n\n` +
+      `Nombre: ${customerName.trim()}\n` +
       `Vehículo: ${selectedVehicle.brand} ${selectedVehicle.line} ${selectedVehicle.year}\n` +
-      `Referencia SAT: ${selectedVehicle.line} ${selectedVehicle.engineCc}cc\n` +
-      `Valor compra/subasta ingresado: ${formatUSD(auctionValueUSD)}\n` +
-      `Documento de respaldo: ${getSupportingDocumentLabel(
+      `${method === "vin" ? `VIN: ${vin || "VIN pendiente"}\n` : ""}` +
+      `Referencia: ${selectedVehicle.line} ${selectedVehicle.engineCc}cc\n\n` +
+      `Valor ingresado: ${formatUSD(auctionValueUSD)}\n` +
+      `Respaldo documental: ${getSupportingDocumentLabel(
         supportingDocument
       )}\n` +
-      `Valor tabla SAT: ${formatGTQ(selectedVehicle.satValueGTQ)}\n\n` +
-      `Estimado con subasta: ${formatGTQ(quote.totalAuction)}\n` +
-      `Estimado con tabla SAT: ${formatGTQ(quote.totalSat)}\n\n` +
-      `Quiero confirmar cuál aplica para mi caso.`
+      `Base considerada: ${mainCalculation.baseLabel}\n\n` +
+      `Valor base considerado:\n` +
+      `${formatGTQ(mainCalculation.baseValue)}\n\n` +
+      `Impuestos y cargos estimados:\n` +
+      `${formatGTQ(mainCalculation.estimatedTaxesAndFees)}\n\n` +
+      `Total parcial estimado:\n` +
+      `${formatGTQ(mainCalculation.partialTotal)}\n\n` +
+      `Observación:\n` +
+      `${mainCalculation.observation}`
   );
 
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${compactMessage}`;
