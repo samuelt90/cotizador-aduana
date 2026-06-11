@@ -35,20 +35,22 @@ function getMainCalculation({
 }) {
   if (supportingDocument === "yes") {
     return {
-      baseLabel: "Valor compra/subasta documentado",
+      baseLabel: "Valor de compra/subasta ingresado por el cliente",
       baseValue: quote.auctionBaseGTQ,
       estimatedTaxesAndFees: quote.totalAuction,
       partialTotal: quote.auctionBaseGTQ + quote.totalAuction,
-      observation: "Quiero confirmar si el documento aplica para este caso.",
+      observation:
+        "Solicito validar si el documento aplica para este caso, confirmar versión exacta del vehículo y monto final correspondiente.",
     };
   }
 
   return {
-    baseLabel: "Tabla SAT",
+    baseLabel: "Referencia de tabla SAT",
     baseValue: quote.satBaseGTQ,
     estimatedTaxesAndFees: quote.totalSat,
     partialTotal: quote.satBaseGTQ + quote.totalSat,
-    observation: "Quiero confirmar el monto para este caso.",
+    observation:
+      "Solicito validar referencia SAT aplicable, versión exacta del vehículo y monto final correspondiente.",
   };
 }
 
@@ -71,12 +73,13 @@ export function buildWhatsappUrl({
       `Nombre: ${customerName.trim()}\n` +
       `Vehículo: ${selectedVehicle.brand} ${selectedVehicle.line} ${selectedVehicle.year}\n` +
       `${method === "vin" ? `VIN: ${vin || "VIN pendiente"}\n` : ""}` +
-      `Referencia: ${selectedVehicle.line} ${selectedVehicle.engineCc}cc\n\n` +
+      `Referencia SAT: ${selectedVehicle.line} ${selectedVehicle.engineCc}cc\n\n` +
       `Valor ingresado: ${formatUSD(auctionValueUSD)}\n` +
-      `Respaldo documental: ${getSupportingDocumentLabel(
+      `Respaldo documental indicado por el cliente: ${getSupportingDocumentLabel(
         supportingDocument
-      )}\n` +
-      `Base considerada: ${mainCalculation.baseLabel}\n\n` +
+      )}\n\n` +
+      `Valor usado para esta estimación:\n` +
+      `${mainCalculation.baseLabel}\n\n` +
       `Valor base considerado:\n` +
       `${formatGTQ(mainCalculation.baseValue)}\n\n` +
       `Impuestos y cargos estimados:\n` +

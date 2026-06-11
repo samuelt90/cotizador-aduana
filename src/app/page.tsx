@@ -21,20 +21,35 @@ import { CalculationLoading } from "@/components/cotizador/CalculationLoading";
 import { VinQuoteForm } from "@/components/cotizador/VinQuoteForm";
 import { SatSearchForm } from "@/components/cotizador/SatSearchForm";
 import { QuoteResult } from "@/components/cotizador/QuoteResult";
+import { getSatVehicleBrands, getSatVehicleLines, getSatVehicleYears,searchSatVehicles, type SatVehicleReference } from "@/lib/satVehiclesApi";
+import type { Vehicle } from "@/types/vehicle";
 
 export default function Home() {
   const [screen, setScreen] = useState<ScreenState>("method");
   const [method, setMethod] = useState<QuoteMethod | null>(null);
 
   const [supportingDocument, setSupportingDocument] =
-  useState<SupportingDocumentStatus>(null);
+    useState<SupportingDocumentStatus>(null);
 
   const [vin, setVin] = useState("");
   const [auctionValueUSD, setAuctionValueUSD] = useState("3750");
 
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [availableBrands, setAvailableBrands] = useState<string[]>([]);
+  const [availableLines, setAvailableLines] = useState<string[]>([]);
+
   const [selectedType, setSelectedType] = useState("");
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [selectedBrand, setSelectedBrand] = useState("");
-  const [selectedVehicleId, setSelectedVehicleId] = useState("");
+  const [selectedLine, setSelectedLine] = useState("");
+
+  const [selectedVehicle, setSelectedVehicle] =
+    useState<SatVehicleReference | null>(null);
+
+  const [loadingYears, setLoadingYears] = useState(false);
+  const [loadingBrands, setLoadingBrands] = useState(false);
+  const [loadingLines, setLoadingLines] = useState(false);
+  const [loadingVehicle, setLoadingVehicle] = useState(false);
 
   const [activeLoadingStep, setActiveLoadingStep] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
@@ -45,50 +60,201 @@ export default function Home() {
   const [showNameBox, setShowNameBox] = useState(false);
   const [customerName, setCustomerName] = useState("");
 
-  const availableBrands = useMemo(() => {
-    if (!selectedType) return [];
+  useEffect(() => {
+    if (!selectedType) return;
 
-    return Array.from(
-      new Set(
-        demoVehicles
-          .filter((vehicle) => vehicle.type === selectedType)
-          .map((vehicle) => vehicle.brand)
-      )
-    );
+    let ignore = false;
+
+    async function loadYears() {
+      try {
+        setLoadingYears(true);
+
+        const years = await getSatVehicleYears({
+          type: selectedType,
+        });
+
+        if (!ignore) {
+          setAvailableYears(years);
+        }
+      } catch (error) {
+        console.error("Error cargando años SAT:", error);
+
+        if (!ignore) {
+          setAvailableYears([]);
+        }
+      } finally {
+        if (!ignore) {
+          setLoadingYears(false);
+        }
+      }
+    }
+
+    loadYears();
+
+    return () => {
+      ignore = true;
+    };
   }, [selectedType]);
 
-  const availableVehicles = useMemo(() => {
-    return demoVehicles.filter((vehicle) => {
-      if (!selectedType || !selectedBrand) return false;
+  useEffect(() => {
+    if (!selectedType || !selectedYear) return;
 
-      return vehicle.type === selectedType && vehicle.brand === selectedBrand;
-    });
-  }, [selectedType, selectedBrand]);
+    let ignore = false;
 
-  const selectedVehicle = useMemo(() => {
-    if (method === "vin") return demoVehicles[0];
+    async function loadBrands() {
+      try {
+        setLoadingBrands(true);
 
-    return (
-      demoVehicles.find((vehicle) => vehicle.id === selectedVehicleId) ??
-      demoVehicles[0]
-    );
-  }, [method, selectedVehicleId]);
+        const brands = await getSatVehicleBrands({
+          type: selectedType,
+          year: selectedYear ?? undefined,
+        });
+
+        if (!ignore) {
+          setAvailableBrands(brands);
+        }
+      } catch (error) {
+        console.error("Error cargando marcas SAT:", error);
+
+        if (!ignore) {
+          setAvailableBrands([]);
+        }
+      } finally {
+        if (!ignore) {
+          setLoadingBrands(false);
+        }
+      }
+    }
+
+    loadBrands();
+
+    return () => {
+      ignore = true;
+    };
+  }, [selectedType, selectedYear]);
+
+  useEffect(() => {
+    if (!selectedType || !selectedYear || !selectedBrand) return;
+
+    let ignore = false;
+
+    async function loadLines() {
+      try {
+        setLoadingLines(true);
+
+        const lines = await getSatVehicleLines({
+          type: selectedType,
+          year: selectedYear?? undefined,
+          brand: selectedBrand,
+        });
+
+        if (!ignore) {
+          setAvailableLines(lines);
+        }
+      } catch (error) {
+        console.error("Error cargando líneas SAT:", error);
+
+        if (!ignore) {
+          setAvailableLines([]);
+        }
+      } finally {
+        if (!ignore) {
+          setLoadingLines(false);
+        }
+      }
+    }
+
+    loadLines();
+
+    return () => {
+      ignore = true;
+    };
+  }, [selectedType, selectedYear, selectedBrand]);
+
+  useEffect(() => {
+    if (!selectedType || !selectedYear || !selectedBrand || !selectedLine) {
+      return;
+    }
+
+    let ignore = false;
+
+    async function loadVehicleReference() {
+      try {
+        setLoadingVehicle(true);
+
+        const results = await searchSatVehicles({
+          type: selectedType,
+          year: selectedYear ?? undefined,
+          brand: selectedBrand,
+          q: selectedLine,
+        });
+
+        if (!ignore) {
+          setSelectedVehicle(results[0] ?? null);
+        }
+      } catch (error) {
+        console.error("Error buscando referencia SAT:", error);
+
+        if (!ignore) {
+          setSelectedVehicle(null);
+        }
+      } finally {
+        if (!ignore) {
+          setLoadingVehicle(false);
+        }
+      }
+    }
+
+    loadVehicleReference();
+
+    return () => {
+      ignore = true;
+    };
+  }, [selectedType, selectedYear, selectedBrand, selectedLine]);
+
+const selectedVehicleForQuote = useMemo<Vehicle>(() => {
+  if (method === "vin") {
+    return demoVehicles[0];
+  }
+
+  if (!selectedVehicle) {
+    return demoVehicles[0];
+  }
+
+  return {
+    id: selectedVehicle.id,
+    type: selectedVehicle.vehicleType,
+    brand: selectedVehicle.brand,
+    line: selectedVehicle.line,
+    year: selectedVehicle.modelYear,
+    satDescription: selectedVehicle.technicalLabel,
+    satValueGTQ: Number(selectedVehicle.satValueGtq),
+    iprimaRate: 0.2,
+    plateFee: 75,
+    engineCc: selectedVehicle.engineCc ?? 0,
+    fuel: selectedVehicle.fuelLabel ?? "Gasolina",
+    seats: selectedVehicle.seats ?? 0,
+    icon: "car",
+  };
+}, [method, selectedVehicle]);
+
 
   const parsedAuctionValueUSD = Number(auctionValueUSD) || 0;
 
   const quote = useMemo(
-    () => calculateQuote(selectedVehicle, parsedAuctionValueUSD),
-    [selectedVehicle, parsedAuctionValueUSD]
+    () => calculateQuote(selectedVehicleForQuote, parsedAuctionValueUSD),
+    [selectedVehicleForQuote, parsedAuctionValueUSD]
   );
 
   const lowestEstimate = Math.min(quote.totalAuction, quote.totalSat);
-
   const canContinueFromMethod = method !== null;
 
-  const canCalculate =
-  parsedAuctionValueUSD > 0 &&
-  supportingDocument !== null &&
-  (method === "vin" ? vin.trim().length > 0 : selectedVehicleId.length > 0);
+const canCalculate =
+    parsedAuctionValueUSD > 0 &&
+    supportingDocument !== null &&
+    (method === "vin"
+      ? vin.trim().length > 0
+      : selectedVehicleForQuote !== null && selectedLine.length > 0);
 
   useEffect(() => {
     if (screen !== "loading") return;
@@ -128,9 +294,18 @@ export default function Home() {
     setMethod(null);
     setVin("");
     setAuctionValueUSD("3750");
+
+    setAvailableYears([]);
+    setAvailableBrands([]);
+    setAvailableLines([]);
+
     setSelectedType("");
+    setSelectedYear(null);
     setSelectedBrand("");
-    setSelectedVehicleId("");
+    setSelectedLine("");
+    setSelectedVehicle(null);
+
+    setSupportingDocument(null);
     setShowDetails(false);
     setShowNameBox(false);
   }
@@ -144,11 +319,12 @@ export default function Home() {
     method,
     customerName,
     vin,
-    selectedVehicle,
+    selectedVehicle: selectedVehicleForQuote,
     auctionValueUSD: parsedAuctionValueUSD,
     quote,
     supportingDocument,
   });
+
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#050b14] text-white">
@@ -214,24 +390,47 @@ export default function Home() {
         {screen === "form" && method === "sat" && (
        <SatSearchForm
           vehicleTypes={vehicleTypes}
+          availableYears={availableYears}
           availableBrands={availableBrands}
-          availableVehicles={availableVehicles}
+          availableLines={availableLines}
           selectedType={selectedType}
+          selectedYear={selectedYear}
           selectedBrand={selectedBrand}
-          selectedVehicleId={selectedVehicleId}
+          selectedLine={selectedLine}
           selectedVehicle={selectedVehicle}
           auctionValueUSD={auctionValueUSD}
           supportingDocument={supportingDocument}
+          loadingYears={loadingYears}
+          loadingBrands={loadingBrands}
+          loadingLines={loadingLines}
+          loadingVehicle={loadingVehicle}
           onSelectType={(value) => {
             setSelectedType(value);
+            setSelectedYear(null);
             setSelectedBrand("");
-            setSelectedVehicleId("");
+            setSelectedLine("");
+            setSelectedVehicle(null);
+            setAvailableYears([]);
+            setAvailableBrands([]);
+            setAvailableLines([]);
+          }}
+          onSelectYear={(value) => {
+            setSelectedYear(value);
+            setSelectedBrand("");
+            setSelectedLine("");
+            setSelectedVehicle(null);
+            setAvailableBrands([]);
+            setAvailableLines([]);
           }}
           onSelectBrand={(value) => {
             setSelectedBrand(value);
-            setSelectedVehicleId("");
+            setSelectedLine("");
+            setSelectedVehicle(null);
+            setAvailableLines([]);
           }}
-          onSelectVehicle={setSelectedVehicleId}
+          onSelectLine={(value) => {
+            setSelectedLine(value);
+          }}
           onChangeAuctionValueUSD={setAuctionValueUSD}
           onChangeSupportingDocument={setSupportingDocument}
         />
@@ -249,7 +448,7 @@ export default function Home() {
         <QuoteResult
           method={method}
           vin={vin}
-          selectedVehicle={selectedVehicle}
+          selectedVehicle={selectedVehicleForQuote}
           auctionValueUSD={parsedAuctionValueUSD}
           quote={quote}
           lowestEstimate={lowestEstimate}
@@ -261,8 +460,8 @@ export default function Home() {
       <StickyBottomBar
         screen={screen}
         method={method}
-        selectedVehicle={selectedVehicle}
-        selectedVehicleId={selectedVehicleId}
+        selectedVehicle={selectedVehicleForQuote}
+        selectedVehicleId={selectedVehicle?.id?? ""}
         auctionValueUSD={parsedAuctionValueUSD}
         lowestEstimate={lowestEstimate}
         canContinueFromMethod={canContinueFromMethod}

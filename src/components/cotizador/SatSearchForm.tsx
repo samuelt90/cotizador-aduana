@@ -4,39 +4,58 @@ import { InputPanel } from "@/components/ui/InputPanel";
 import { OptionGroup } from "@/components/ui/OptionGroup";
 import { formatGTQ } from "@/lib/formatters";
 import { EXCHANGE_RATE } from "@/lib/quoteCalculator";
+import type { SatVehicleReference } from "@/lib/satVehiclesApi";
 import type { SupportingDocumentStatus } from "@/types/quote";
-import type { Vehicle } from "@/types/vehicle";
 
 type SatSearchFormProps = {
   vehicleTypes: string[];
+
+  availableYears: number[];
   availableBrands: string[];
-  availableVehicles: Vehicle[];
+  availableLines: string[];
+
   selectedType: string;
+  selectedYear: number | null;
   selectedBrand: string;
-  selectedVehicleId: string;
-  selectedVehicle: Vehicle;
+  selectedLine: string;
+  selectedVehicle: SatVehicleReference | null;
+
   auctionValueUSD: string;
   supportingDocument: SupportingDocumentStatus;
+
+  loadingYears?: boolean;
+  loadingBrands?: boolean;
+  loadingLines?: boolean;
+  loadingVehicle?: boolean;
+
   onSelectType: (value: string) => void;
+  onSelectYear: (value: number) => void;
   onSelectBrand: (value: string) => void;
-  onSelectVehicle: (value: string) => void;
+  onSelectLine: (value: string) => void;
   onChangeAuctionValueUSD: (value: string) => void;
   onChangeSupportingDocument: (value: SupportingDocumentStatus) => void;
 };
 
 export function SatSearchForm({
   vehicleTypes,
+  availableYears,
   availableBrands,
-  availableVehicles,
+  availableLines,
   selectedType,
+  selectedYear,
   selectedBrand,
-  selectedVehicleId,
+  selectedLine,
   selectedVehicle,
   auctionValueUSD,
   supportingDocument,
+  loadingYears = false,
+  loadingBrands = false,
+  loadingLines = false,
+  loadingVehicle = false,
   onSelectType,
+  onSelectYear,
   onSelectBrand,
-  onSelectVehicle,
+  onSelectLine,
   onChangeAuctionValueUSD,
   onChangeSupportingDocument,
 }: SatSearchFormProps) {
@@ -44,7 +63,7 @@ export function SatSearchForm({
     <div className="animate-[fadeUp_0.45s_ease-out]">
       <StepHeader
         eyebrow="Búsqueda por tabla SAT"
-        title="Selecciona el vehículo y compara escenarios."
+        title="Selecciona el vehículo y revisa una referencia preliminar."
         text="Ideal si todavía estás evaluando qué vehículo traer o si necesitas una referencia rápida antes de comprar."
       />
 
@@ -61,40 +80,106 @@ export function SatSearchForm({
         </OptionGroup>
 
         {selectedType && (
-          <OptionGroup title="2. Marca">
-            {availableBrands.map((brand) => (
-              <ChoiceButton
-                key={brand}
-                active={selectedBrand === brand}
-                label={brand}
-                onClick={() => onSelectBrand(brand)}
-              />
-            ))}
+          <OptionGroup title="2. Año">
+            {loadingYears ? (
+              <p className="text-sm text-slate-400">
+                Cargando años disponibles...
+              </p>
+            ) : (
+              availableYears.map((year) => (
+                <ChoiceButton
+                  key={year}
+                  active={selectedYear === year}
+                  label={String(year)}
+                  onClick={() => onSelectYear(year)}
+                />
+              ))
+            )}
           </OptionGroup>
         )}
 
-        {selectedBrand && (
-          <OptionGroup title="3. Línea / modelo">
-            {availableVehicles.map((vehicle) => (
-              <ChoiceButton
-                key={vehicle.id}
-                active={selectedVehicleId === vehicle.id}
-                label={`${vehicle.brand} ${vehicle.line} ${vehicle.year}`}
-                onClick={() => onSelectVehicle(vehicle.id)}
-              />
-            ))}
+        {selectedType && selectedYear && (
+          <OptionGroup title="3. Marca">
+            {loadingBrands ? (
+              <p className="text-sm text-slate-400">
+                Cargando marcas disponibles...
+              </p>
+            ) : (
+              availableBrands.map((brand) => (
+                <ChoiceButton
+                  key={brand}
+                  active={selectedBrand === brand}
+                  label={brand}
+                  onClick={() => onSelectBrand(brand)}
+                />
+              ))
+            )}
           </OptionGroup>
         )}
 
-        {selectedVehicleId && (
+        {selectedType && selectedYear && selectedBrand && (
+          <OptionGroup title="4. Línea / modelo">
+            {loadingLines ? (
+              <p className="text-sm text-slate-400">
+                Cargando líneas disponibles...
+              </p>
+            ) : (
+              availableLines.map((line) => (
+                <ChoiceButton
+                  key={line}
+                  active={selectedLine === line}
+                  label={line}
+                  onClick={() => onSelectLine(line)}
+                />
+              ))
+            )}
+          </OptionGroup>
+        )}
+
+        {loadingVehicle && (
+          <div className="rounded-[1.7rem] border border-white/10 bg-white/[0.06] p-5 text-sm text-slate-400">
+            Buscando referencia SAT...
+          </div>
+        )}
+
+        {selectedVehicle && (
           <>
+            <div className="rounded-[1.7rem] border border-cyan-300/20 bg-cyan-300/10 p-5">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200">
+                Referencia SAT seleccionada
+              </p>
+
+              <h3 className="mt-3 text-xl font-black">
+                {selectedVehicle.referenceLabel}
+              </h3>
+
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                {selectedVehicle.technicalLabel}
+              </p>
+
+              <div className="mt-4 grid gap-3 text-sm">
+                <div className="flex justify-between gap-4 rounded-2xl bg-slate-950/40 px-4 py-3">
+                  <span className="text-slate-400">Valor tabla SAT</span>
+                  <span className="font-black">
+                    {formatGTQ(Number(selectedVehicle.satValueGtq))}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-4 rounded-2xl bg-slate-950/40 px-4 py-3">
+                  <span className="text-slate-400">Tipo</span>
+                  <span className="font-black">
+                    {selectedVehicle.vehicleType}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <InputPanel
               label="Valor compra / subasta"
-              helper="Ingresa el valor documentado en dólares para comparar contra la referencia SAT."
+              helper="Ingresa el valor documentado en dólares para comparar contra la referencia de tabla SAT."
             >
               <div className="flex items-center gap-3">
                 <span className="text-lg font-black text-cyan-300">$</span>
-
                 <input
                   value={auctionValueUSD}
                   onChange={(event) =>
@@ -104,7 +189,6 @@ export function SatSearchForm({
                   placeholder="3750"
                   className="w-full bg-transparent text-lg font-black text-white outline-none placeholder:text-slate-600"
                 />
-
                 <span className="text-xs font-bold text-slate-500">USD</span>
               </div>
             </InputPanel>
@@ -144,41 +228,11 @@ export function SatSearchForm({
               </div>
             </div>
 
-            <div className="rounded-[1.7rem] border border-cyan-300/20 bg-cyan-300/10 p-5">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200">
-                Referencia SAT seleccionada
-              </p>
-
-              <h3 className="mt-3 text-xl font-black">
-                {selectedVehicle.brand} {selectedVehicle.line}{" "}
-                {selectedVehicle.year}
-              </h3>
-
-              <p className="mt-2 text-sm leading-6 text-slate-300">
-                {selectedVehicle.satDescription}
-              </p>
-
-              <div className="mt-4 grid gap-3 text-sm">
-                <div className="flex justify-between gap-4 rounded-2xl bg-slate-950/40 px-4 py-3">
-                  <span className="text-slate-400">Valor tabla SAT</span>
-                  <span className="font-black">
-                    {formatGTQ(selectedVehicle.satValueGTQ)}
-                  </span>
-                </div>
-
-                <div className="flex justify-between gap-4 rounded-2xl bg-slate-950/40 px-4 py-3">
-                  <span className="text-slate-400">IPRIMA aplicado</span>
-                  <span className="font-black">
-                    {(selectedVehicle.iprimaRate * 100).toFixed(0)}%
-                  </span>
-                </div>
-              </div>
-            </div>
-
             <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-sm leading-6 text-slate-400">
-              Tipo de cambio demo:{" "}
+              Tipo de cambio referencial:{" "}
               <span className="font-black text-white">Q{EXCHANGE_RATE}</span>.
-              La validación final debe hacerla Ronaldo con documentos reales.
+              La validación final debe hacerla Ronaldo con documentos reales,
+              versión exacta y criterio aplicable.
             </div>
           </>
         )}
