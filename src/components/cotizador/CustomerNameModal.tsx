@@ -3,19 +3,21 @@ import { MessageCircle } from "lucide-react";
 type CustomerNameModalProps = {
   isOpen: boolean;
   customerName: string;
-  whatsappUrl: string;
   onChangeName: (value: string) => void;
   onClose: () => void;
+  onConfirm: () => void;
 };
 
 export function CustomerNameModal({
   isOpen,
   customerName,
-  whatsappUrl,
   onChangeName,
   onClose,
+  onConfirm,
 }: CustomerNameModalProps) {
   if (!isOpen) return null;
+
+  const canConfirm = customerName.trim().length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-black/70 px-4 pb-4 backdrop-blur-sm md:items-center md:justify-center md:pb-0">
@@ -34,18 +36,24 @@ export function CustomerNameModal({
           className="mt-5 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 text-base font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-300/60"
         />
 
+        <p className="mt-3 text-xs leading-5 text-slate-500">
+          Al continuar se abrirá WhatsApp con el mensaje listo. Debes presionar
+          “Enviar” dentro de WhatsApp para iniciar la validación.
+        </p>
+
         <div className="mt-5 flex flex-col gap-3">
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-300 px-6 py-4 text-sm font-black text-slate-950 transition hover:bg-cyan-200"
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={!canConfirm}
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-300 px-6 py-4 text-sm font-black text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
           >
             <MessageCircle size={18} />
-            Abrir WhatsApp
-          </a>
+            Continuar a WhatsApp
+          </button>
 
           <button
+            type="button"
             onClick={onClose}
             className="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/10 px-6 py-4 text-sm font-bold text-white/90 transition hover:bg-white hover:text-slate-950"
           >

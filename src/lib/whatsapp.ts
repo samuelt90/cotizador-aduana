@@ -8,7 +8,7 @@ import type { Vehicle } from "@/types/vehicle";
 
 const WHATSAPP_NUMBER = "50238093056";
 
-type BuildWhatsappUrlParams = {
+type BuildWhatsappMessageParams = {
   method: QuoteMethod | null;
   customerName: string;
   vin: string;
@@ -54,7 +54,7 @@ function getMainCalculation({
   };
 }
 
-export function buildWhatsappUrl({
+export function buildWhatsappMessage({
   method,
   customerName,
   vin,
@@ -62,33 +62,39 @@ export function buildWhatsappUrl({
   auctionValueUSD,
   quote,
   supportingDocument,
-}: BuildWhatsappUrlParams) {
+}: BuildWhatsappMessageParams) {
   const mainCalculation = getMainCalculation({
     quote,
     supportingDocument,
   });
 
-  const compactMessage = encodeURIComponent(
+  return (
     `Hola Ronaldo, quiero validar esta cotización aduanera.\n\n` +
-      `Nombre: ${customerName.trim()}\n` +
-      `Vehículo: ${selectedVehicle.brand} ${selectedVehicle.line} ${selectedVehicle.year}\n` +
-      `${method === "vin" ? `VIN: ${vin || "VIN pendiente"}\n` : ""}` +
-      `Referencia SAT: ${selectedVehicle.line} ${selectedVehicle.engineCc}cc\n\n` +
-      `Valor ingresado: ${formatUSD(auctionValueUSD)}\n` +
-      `Respaldo documental indicado por el cliente: ${getSupportingDocumentLabel(
-        supportingDocument
-      )}\n\n` +
-      `Valor usado para esta estimación:\n` +
-      `${mainCalculation.baseLabel}\n\n` +
-      `Valor base considerado:\n` +
-      `${formatGTQ(mainCalculation.baseValue)}\n\n` +
-      `Impuestos y cargos estimados:\n` +
-      `${formatGTQ(mainCalculation.estimatedTaxesAndFees)}\n\n` +
-      `Total parcial estimado:\n` +
-      `${formatGTQ(mainCalculation.partialTotal)}\n\n` +
-      `Observación:\n` +
-      `${mainCalculation.observation}`
+    `*DATOS DEL VEHÍCULO*\n` +
+    `Nombre: ${customerName.trim()}\n` +
+    `Vehículo: ${selectedVehicle.brand} ${selectedVehicle.line} ${selectedVehicle.year}\n` +
+    `${method === "vin" ? `VIN: ${vin || "VIN pendiente"}\n` : ""}` +
+    `Referencia SAT usada: ${selectedVehicle.line} ${selectedVehicle.engineCc}cc\n\n` +
+    `*VALORES INGRESADOS*\n` +
+    `Valor compra/subasta: ${formatUSD(auctionValueUSD)}\n` +
+    `Respaldo documental indicado por el cliente: ${getSupportingDocumentLabel(
+      supportingDocument
+    )}\n` +
+    `Valor usado para esta estimación: ${mainCalculation.baseLabel}\n\n` +
+    `*DESGLOSE PRELIMINAR*\n` +
+    `Valor base considerado: ${formatGTQ(mainCalculation.baseValue)}\n` +
+    `Impuestos y cargos estimados: ${formatGTQ(
+      mainCalculation.estimatedTaxesAndFees
+    )}\n` +
+    `Total parcial estimado: ${formatGTQ(mainCalculation.partialTotal)}\n\n` +
+    `*OBSERVACIÓN*\n` +
+    `${mainCalculation.observation}`
   );
+}
 
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${compactMessage}`;
+export function buildWhatsappUrl(params: BuildWhatsappMessageParams) {
+  const message = buildWhatsappMessage(params);
+  const encodedMessage = encodeURIComponent(message);
+
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`;
 }

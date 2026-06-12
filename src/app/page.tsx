@@ -10,7 +10,7 @@ import { demoVehicles, vehicleTypes } from "@/data/demoSatVehicles";
 import { faqItems } from "@/data/faqItems";
 import { loadingSteps } from "@/data/loadingSteps";
 import { calculateQuote} from "@/lib/quoteCalculator";
-import { buildWhatsappUrl } from "@/lib/whatsapp";
+import { buildWhatsappUrl, buildWhatsappMessage } from "@/lib/whatsapp";
 import type { QuoteMethod, ScreenState, SupportingDocumentStatus } from "@/types/quote";
 import { WelcomeHero } from "@/components/cotizador/WelcomeHero";
 import { QuoteMethodSelector } from "@/components/cotizador/QuoteMethodSelector";
@@ -23,6 +23,8 @@ import { SatSearchForm } from "@/components/cotizador/SatSearchForm";
 import { QuoteResult } from "@/components/cotizador/QuoteResult";
 import { getSatVehicleBrands, getSatVehicleLines, getSatVehicleYears,searchSatVehicles, type SatVehicleReference } from "@/lib/satVehiclesApi";
 import type { Vehicle } from "@/types/vehicle";
+import { decodeVin, type VinDecodeResponse } from "@/lib/vinApi";
+import { WhatsappRedirectScreen } from "@/components/cotizador/WhatsappRedirectScreen";
 
 export default function Home() {
   const [screen, setScreen] = useState<ScreenState>("method");
@@ -33,6 +35,9 @@ export default function Home() {
 
   const [vin, setVin] = useState("");
   const [auctionValueUSD, setAuctionValueUSD] = useState("3750");
+
+  const [vinResult, setVinResult] = useState<VinDecodeResponse | null>(null);
+  const [loadingVin, setLoadingVin] = useState(false);
 
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [availableBrands, setAvailableBrands] = useState<string[]>([]);
@@ -59,6 +64,8 @@ export default function Home() {
 
   const [showNameBox, setShowNameBox] = useState(false);
   const [customerName, setCustomerName] = useState("");
+
+  const [copiedWhatsappMessage, setCopiedWhatsappMessage] = useState(false);
 
   useEffect(() => {
     if (!selectedType) return;
@@ -289,6 +296,47 @@ const canCalculate =
     setScreen("form");
   }
 
+  async function handleDecodeVin() {
+  if (!vin.trim()) return;
+
+  try {
+    setLoadingVin(true);
+
+    const result = await decodeVin(vin);
+
+    setVinResult(result);
+
+    if (result.ok && result.satReference) {
+      setSelectedVehicle({
+        id: result.satReference.id,
+        vehicleType: result.satReference.vehicleType,
+        brand: result.satReference.brand,
+        line: result.satReference.line,
+        modelYear: result.satReference.modelYear,
+        engineCc: result.satReference.engineCc,
+        cylinders: result.satReference.cylinders,
+        doors: result.satReference.doors,
+        fuelCode: result.satReference.fuelCode,
+        fuelLabel: result.satReference.fuelLabel,
+        seats: result.satReference.seats,
+        satValueGtq: result.satReference.satValueGtq,
+        referenceLabel: result.satReference.referenceLabel,
+        technicalLabel: result.satReference.technicalLabel,
+      });
+    }
+  } catch (error) {
+    console.error("Error consultando VIN:", error);
+
+    setVinResult({
+      ok: false,
+      message: "No se pudo consultar el VIN. Intenta nuevamente.",
+    });
+  } finally {
+    setLoadingVin(false);
+  }
+}
+
+
   function resetFlow() {
     setScreen("method");
     setMethod(null);
@@ -316,15 +364,51 @@ const canCalculate =
   }
 
   const whatsappUrl = buildWhatsappUrl({
-    method,
-    customerName,
-    vin,
-    selectedVehicle: selectedVehicleForQuote,
-    auctionValueUSD: parsedAuctionValueUSD,
-    quote,
-    supportingDocument,
-  });
+  method,
+  customerName,
+  vin,
+  selectedVehicle: selectedVehicleForQuote,
+  auctionValueUSD: parsedAuctionValueUSD,
+  quote,
+  supportingDocument,
+});
 
+const whatsappMessage = buildWhatsappMessage({
+  method,
+  customerName,
+  vin,
+  selectedVehicle: selectedVehicleForQuote,
+  auctionValueUSD: parsedAuctionValueUSD,
+  quote,
+  supportingDocument,
+});
+
+function openWhatsappAndShowConfirmation() {
+  window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+  setCopiedWhatsappMessage(false);
+  setShowNameBox(false);
+  setScreen("whatsapp");
+}
+
+async function copyWhatsappMessage() {
+  try {
+    await navigator.clipboard.writeText(whatsappMessage);
+    setCopiedWhatsappMessage(true);
+  } catch (error) {
+    console.error("No se pudo copiar el mensaje:", error);
+  }
+}
+
+if (screen === "whatsapp") {
+  return (
+    <WhatsappRedirectScreen
+      copied={copiedWhatsappMessage}
+      onOpenWhatsapp={openWhatsappAndShowConfirmation}
+      onCopyMessage={copyWhatsappMessage}
+      onNewQuote={resetFlow}
+    />
+  );
+}
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#050b14] text-white">
@@ -378,15 +462,24 @@ const canCalculate =
         )}
 
         {screen === "form" && method === "vin" && (
-          <VinQuoteForm
-            vin={vin}
-            auctionValueUSD={auctionValueUSD}
-            supportingDocument={supportingDocument}
-            onChangeVin={setVin}
-            onChangeAuctionValueUSD={setAuctionValueUSD}
-            onChangeSupportingDocument={setSupportingDocument}
-          />
-        )}
+            <VinQuoteForm
+              vin={vin}
+              auctionValueUSD={auctionValueUSD}
+              supportingDocument={supportingDocument}
+              vinResult={vinResult}
+              loadingVin={loadingVin}
+              onChangeVin={(value) => {
+                setVin(value);
+                setVinResult(null);
+                setSelectedVehicle(null);
+                setSupportingDocument(null);
+              }}
+              onDecodeVin={handleDecodeVin}
+              onChangeAuctionValueUSD={setAuctionValueUSD}
+              onChangeSupportingDocument={setSupportingDocument}
+            />
+          )}
+
         {screen === "form" && method === "sat" && (
        <SatSearchForm
           vehicleTypes={vehicleTypes}
@@ -479,13 +572,14 @@ const canCalculate =
           onClose={() => setShowFaq(false)}
         />
 
-          <CustomerNameModal
-        isOpen={showNameBox}
-        customerName={customerName}
-        whatsappUrl={whatsappUrl}
-        onChangeName={setCustomerName}
-        onClose={() => setShowNameBox(false)}
+         <CustomerNameModal
+            isOpen={showNameBox}
+            customerName={customerName}
+            onChangeName={setCustomerName}
+            onClose={() => setShowNameBox(false)}
+            onConfirm={openWhatsappAndShowConfirmation}
           />
+
 
 
     </main>
