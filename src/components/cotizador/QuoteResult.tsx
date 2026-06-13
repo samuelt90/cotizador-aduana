@@ -1,8 +1,6 @@
 import { AlertTriangle, Car, FileCheck2, FileQuestion } from "lucide-react";
-
 import { DetailBox } from "@/components/cotizador/DetailBox";
-import { EstimateCard } from "@/components/cotizador/EstimateCard";
-import { formatGTQ, formatUSD } from "@/lib/formatters";
+import { formatGTQ } from "@/lib/formatters";
 import type {
   QuoteMethod,
   QuoteResult as QuoteResultType,
@@ -24,12 +22,38 @@ export function QuoteResult({
   method,
   vin,
   selectedVehicle,
-  auctionValueUSD,
   quote,
-  lowestEstimate,
   supportingDocument,
 }: QuoteResultProps) {
   const hasSupportingDocument = supportingDocument === "yes";
+
+  const activeTitle = hasSupportingDocument
+    ? "Estimación con respaldo documental"
+    : "Estimación con referencia SAT";
+
+  const activeTotal = hasSupportingDocument
+    ? quote.totalAuction
+    : quote.totalSat;
+
+  const activeBase = hasSupportingDocument
+    ? quote.auctionBaseGTQ
+    : quote.satBaseGTQ;
+
+  const activeIva = hasSupportingDocument
+    ? quote.ivaAuction
+    : quote.ivaSat;
+
+  const activeIprima = hasSupportingDocument
+    ? quote.iprimaAuction
+    : quote.iprimaSat;
+
+  const activeDetailTitle = hasSupportingDocument
+    ? "Desglose con respaldo documental"
+    : "Desglose con referencia SAT";
+
+  const activeBaseLabel = hasSupportingDocument
+    ? "Base en quetzales"
+    : "Base SAT";
 
   return (
     <div className="animate-[fadeUp_0.45s_ease-out]">
@@ -44,8 +68,12 @@ export function QuoteResult({
               Resultado preliminar
             </p>
 
-            <h2 className="mt-2 text-3xl font-black leading-tight md:text-5xl">
-              Desde {formatGTQ(lowestEstimate)}
+            <p className="mt-2 text-xs font-black uppercase tracking-[0.16em] text-cyan-100/80">
+              {activeTitle}
+            </p>
+
+            <h2 className="mt-3 text-3xl font-black leading-tight md:text-5xl">
+              {formatGTQ(activeTotal)}
             </h2>
 
             <p className="mt-3 text-sm leading-6 text-slate-300">
@@ -54,8 +82,8 @@ export function QuoteResult({
                 {selectedVehicle.brand} {selectedVehicle.line}{" "}
                 {selectedVehicle.year}
               </span>
-              . Ronaldo debe validar documentos, versión exacta y referencia SAT
-              antes de confirmar el monto final.
+              . El agente aduanero debe validar documentos, versión exacta y
+              referencia SAT antes de confirmar el monto final.
             </p>
           </div>
         </div>
@@ -88,8 +116,8 @@ export function QuoteResult({
               }`}
             >
               {hasSupportingDocument
-                ? "El cliente indica que sí tiene respaldo documental."
-                : "El cliente indica que no tiene respaldo documental."}
+                ? "Sí tiene respaldo documental."
+                : "No tiene respaldo documental."}
             </p>
 
             <p
@@ -100,61 +128,25 @@ export function QuoteResult({
               }`}
             >
               {hasSupportingDocument
-                ? "El escenario con valor de compra o subasta puede aplicar si Ronaldo valida el invoice, documento de subasta o respaldo correspondiente."
-                : "El valor de compra ingresado queda como referencia informativa. Ronaldo deberá validar si corresponde usar la referencia de tabla SAT para el caso real."}
+                ? "El cálculo usa el valor de compra o subasta indicado, sujeto a validación del invoice, documento de subasta o respaldo correspondiente."
+                : "El cálculo usa referencia SAT estimada como base principal para este escenario."}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <EstimateCard
-          title="Escenario con valor compra/subasta"
-          subtitle={
-            hasSupportingDocument
-              ? `Valor respaldado por validar: ${formatUSD(auctionValueUSD)}`
-              : `Valor informativo ingresado: ${formatUSD(auctionValueUSD)}`
-          }
-          total={formatGTQ(quote.totalAuction)}
-          base={formatGTQ(quote.auctionBaseGTQ)}
-        />
-
-        <EstimateCard
-          title="Escenario con referencia SAT"
-          subtitle={
-            hasSupportingDocument
-              ? "Comparación contra referencia fiscal"
-              : "Referencia principal si no hay respaldo documental"
-          }
-          total={formatGTQ(quote.totalSat)}
-          base={formatGTQ(quote.satBaseGTQ)}
-        />
-      </div>
-
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
+      <div className="mt-6">
         <DetailBox
-          title="Desglose con compra/subasta"
+          title={activeDetailTitle}
           rows={[
-            ["Base en quetzales", formatGTQ(quote.auctionBaseGTQ)],
-            ["IVA 12%", formatGTQ(quote.ivaAuction)],
+            [activeBaseLabel, formatGTQ(activeBase)],
+            ["IVA 12%", formatGTQ(activeIva)],
             [
               `IPRIMA ${(selectedVehicle.iprimaRate * 100).toFixed(0)}%`,
-              formatGTQ(quote.iprimaAuction),
+              formatGTQ(activeIprima),
             ],
             ["Placas", formatGTQ(selectedVehicle.plateFee)],
-          ]}
-        />
-
-        <DetailBox
-          title="Desglose con tabla SAT"
-          rows={[
-            ["Base SAT", formatGTQ(quote.satBaseGTQ)],
-            ["IVA 12%", formatGTQ(quote.ivaSat)],
-            [
-              `IPRIMA ${(selectedVehicle.iprimaRate * 100).toFixed(0)}%`,
-              formatGTQ(quote.iprimaSat),
-            ],
-            ["Placas", formatGTQ(selectedVehicle.plateFee)],
+            ["Total estimado", formatGTQ(activeTotal)],
           ]}
         />
       </div>
