@@ -16,18 +16,18 @@ export function QuoteMethodSelector({
       <MethodCard
         active={method === "vin"}
         icon={<FileSearch size={30} />}
-        title="Ya tengo VIN"
-        subtitle="Vehículo comprado, apartado o con documentos."
-        description="El sistema identifica el vehículo y luego compara contra la referencia SAT."
+        title="Búsqueda por VIN"
+        subtitle="Para un vehículo concreto que ya tiene VIN."
+        description="Inicia la revisión con VIN y luego define si es compra/subasta o uso personal."
         onClick={() => onSelect("vin")}
       />
 
       <MethodCard
         active={method === "sat"}
         icon={<Search size={30} />}
-        title="Estoy comparando opciones"
-        subtitle="Consulta rápida antes de comprar o participar en subasta."
-        description="Busca por tipo, marca, modelo y año usando referencias SAT."
+        title="Consulta sin VIN"
+        subtitle="Para comparar opciones antes de comprar."
+        description="Cotiza de forma referencial por tipo, año, marca y línea usando la tabla comparativa SAT."
         onClick={() => onSelect("sat")}
       />
     </div>
@@ -51,6 +51,7 @@ function MethodCard({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={`group rounded-[2rem] border p-6 text-left transition active:scale-[0.99] ${
         active

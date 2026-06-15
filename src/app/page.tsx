@@ -6,7 +6,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 
-import { demoVehicles, vehicleTypes } from "@/data/demoSatVehicles";
+import { vehicleTypes } from "@/data/demoSatVehicles";
 import { faqItems } from "@/data/faqItems";
 import { loadingSteps } from "@/data/loadingSteps";
 import { calculateQuote} from "@/lib/quoteCalculator";
@@ -219,13 +219,9 @@ export default function Home() {
     };
   }, [selectedType, selectedYear, selectedBrand, selectedLine]);
 
-const selectedVehicleForQuote = useMemo<Vehicle>(() => {
-  if (method === "vin") {
-    return demoVehicles[0];
-  }
-
+const selectedVehicleForQuote = useMemo<Vehicle | null>(() => {
   if (!selectedVehicle) {
-    return demoVehicles[0];
+    return null;
   }
 
   return {
@@ -243,18 +239,23 @@ const selectedVehicleForQuote = useMemo<Vehicle>(() => {
     seats: selectedVehicle.seats ?? 0,
     icon: "car",
   };
-}, [method, selectedVehicle]);
+}, [selectedVehicle]);
 
 
   const parsedAuctionValueUSD = Number(auctionValueUSD) || 0;
+const quote = useMemo(() => {
+  if (!selectedVehicleForQuote) {
+    return null;
+  }
 
-  const quote = useMemo(
-    () => calculateQuote(selectedVehicleForQuote, parsedAuctionValueUSD),
-    [selectedVehicleForQuote, parsedAuctionValueUSD]
-  );
+  return calculateQuote(selectedVehicleForQuote, parsedAuctionValueUSD);
+}, [selectedVehicleForQuote, parsedAuctionValueUSD]);
 
-  const lowestEstimate = Math.min(quote.totalAuction, quote.totalSat);
-  const canContinueFromMethod = method !== null;
+const lowestEstimate = quote
+  ? Math.min(quote.totalAuction, quote.totalSat)
+  : 0;
+
+const canContinueFromMethod = method !== null;
 
 const canCalculate =
     parsedAuctionValueUSD > 0 &&
@@ -363,25 +364,31 @@ const canCalculate =
     setScreen("loading");
   }
 
-  const whatsappUrl = buildWhatsappUrl({
-  method,
-  customerName,
-  vin,
-  selectedVehicle: selectedVehicleForQuote,
-  auctionValueUSD: parsedAuctionValueUSD,
-  quote,
-  supportingDocument,
-});
+const whatsappUrl =
+  selectedVehicleForQuote && quote
+    ? buildWhatsappUrl({
+        method,
+        customerName,
+        vin,
+        selectedVehicle: selectedVehicleForQuote,
+        auctionValueUSD: parsedAuctionValueUSD,
+        quote,
+        supportingDocument,
+      })
+    : "";
 
-const whatsappMessage = buildWhatsappMessage({
-  method,
-  customerName,
-  vin,
-  selectedVehicle: selectedVehicleForQuote,
-  auctionValueUSD: parsedAuctionValueUSD,
-  quote,
-  supportingDocument,
-});
+const whatsappMessage =
+  selectedVehicleForQuote && quote
+    ? buildWhatsappMessage({
+        method,
+        customerName,
+        vin,
+        selectedVehicle: selectedVehicleForQuote,
+        auctionValueUSD: parsedAuctionValueUSD,
+        quote,
+        supportingDocument,
+      })
+    : "";
 
 function openWhatsappAndShowConfirmation() {
   window.open(whatsappUrl, "_blank", "noopener,noreferrer");
@@ -537,17 +544,17 @@ if (screen === "whatsapp") {
           />
         )}
 
-     {screen === "result" && quote && (
-        <QuoteResult
-          method={method}
-          vin={vin}
-          selectedVehicle={selectedVehicleForQuote}
-          auctionValueUSD={parsedAuctionValueUSD}
-          quote={quote}
-          lowestEstimate={lowestEstimate}
-          supportingDocument={supportingDocument}
-        />
-      )}
+   {screen === "result" && quote && selectedVehicleForQuote && (
+  <QuoteResult
+    method={method}
+    vin={vin}
+    selectedVehicle={selectedVehicleForQuote}
+    auctionValueUSD={parsedAuctionValueUSD}
+    quote={quote}
+    lowestEstimate={lowestEstimate}
+    supportingDocument={supportingDocument}
+  />
+)}
       </section>
 
       <StickyBottomBar

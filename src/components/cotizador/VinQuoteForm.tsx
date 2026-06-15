@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { StepHeader } from "@/components/cotizador/StepHeader";
 import { InputPanel } from "@/components/ui/InputPanel";
 import { EXCHANGE_RATE } from "@/lib/quoteCalculator";
@@ -16,6 +17,8 @@ type VinQuoteFormProps = {
   onChangeSupportingDocument: (value: SupportingDocumentStatus) => void;
 };
 
+type VehicleOrigin = "auction" | "personal" | null;
+
 export function VinQuoteForm({
   vin,
   auctionValueUSD,
@@ -27,22 +30,60 @@ export function VinQuoteForm({
   onChangeAuctionValueUSD,
   onChangeSupportingDocument,
 }: VinQuoteFormProps) {
+  const [vehicleOrigin, setVehicleOrigin] = useState<VehicleOrigin>(null);
+
+  const [vehicleYear, setVehicleYear] = useState("");
+  const [vehicleMake, setVehicleMake] = useState("");
+  const [vehicleLine, setVehicleLine] = useState("");
+  const [vehicleVersion, setVehicleVersion] = useState("");
+
   const decodedVehicle = vinResult?.ok ? vinResult.vehicle : null;
   const satReference = vinResult?.ok ? vinResult.satReference : null;
   const errorMessage = vinResult && !vinResult.ok ? vinResult.message : null;
 
+  const showOriginQuestion = vinResult?.ok;
+  const isAuctionCase = vehicleOrigin === "auction";
+  const isPersonalCase = vehicleOrigin === "personal";
+  const hasSupportingDocument = supportingDocument === "yes";
+  const doesNotHaveSupportingDocument = supportingDocument === "no";
+
+  const shouldAskVehicleData =
+    isPersonalCase || (isAuctionCase && doesNotHaveSupportingDocument);
+
+  const shouldAskAuctionValue = isAuctionCase && hasSupportingDocument;
+
+  function handleSelectAuctionCase() {
+    setVehicleOrigin("auction");
+    onChangeSupportingDocument(null);
+  }
+
+  function handleSelectPersonalCase() {
+    setVehicleOrigin("personal");
+    onChangeSupportingDocument("no");
+    onChangeAuctionValueUSD("");
+  }
+
+  function handleSupportingDocumentYes() {
+    onChangeSupportingDocument("yes");
+  }
+
+  function handleSupportingDocumentNo() {
+    onChangeSupportingDocument("no");
+    onChangeAuctionValueUSD("");
+  }
+
   return (
     <div className="animate-[fadeUp_0.45s_ease-out]">
       <StepHeader
-        eyebrow="Cotización por VIN"
-        title="Ingresa el VIN y revisa la referencia encontrada."
-        text="El VIN ayuda a identificar el vehículo. Luego el sistema busca una referencia SAT probable para estimar el caso."
+        eyebrow="Búsqueda por VIN"
+        title="Ingresa el VIN para iniciar la revisión del vehículo."
+        text="Luego define si el caso corresponde a compra/subasta o uso personal. El sistema mostrará solo los datos necesarios para ese caso."
       />
 
       <div className="mt-8 grid gap-5">
         <InputPanel
           label="VIN del vehículo"
-          helper="Código de 17 caracteres. Se usará para identificar año, marca, modelo y una referencia SAT probable."
+          helper="Código de 17 caracteres. Se usa para iniciar la revisión del vehículo."
         >
           <div className="grid gap-4">
             <input
@@ -72,12 +113,11 @@ export function VinQuoteForm({
         {decodedVehicle && (
           <div className="rounded-[1.7rem] border border-white/10 bg-white/[0.06] p-5">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200">
-              Vehículo detectado por VIN
+              Datos detectados por VIN
             </p>
 
             <h3 className="mt-3 text-xl font-black text-white">
-              {decodedVehicle.make} {decodedVehicle.model}{" "}
-              {decodedVehicle.year}
+              {decodedVehicle.make} {decodedVehicle.model} {decodedVehicle.year}
             </h3>
 
             <p className="mt-2 text-sm leading-6 text-slate-300">
@@ -96,6 +136,190 @@ export function VinQuoteForm({
                 .filter(Boolean)
                 .join(" · ")}
             </p>
+
+            <p className="mt-4 text-xs leading-5 text-slate-400">
+              Estos datos son una referencia inicial. Ronaldo puede validar la
+              versión exacta contra documentos reales y tabla SAT.
+            </p>
+          </div>
+        )}
+
+        {showOriginQuestion && (
+          <div className="rounded-[1.7rem] border border-white/10 bg-white/[0.06] p-5">
+            <p className="text-sm font-black text-white">
+              ¿Este vehículo es compra/subasta o uso personal?
+            </p>
+
+            <p className="mt-1 text-xs leading-5 text-slate-400">
+              Esta respuesta define qué datos se piden y qué base se usa para la
+              estimación.
+            </p>
+
+            <div className="mt-4 grid gap-3">
+              <button
+                type="button"
+                onClick={handleSelectAuctionCase}
+                className={`rounded-[1.4rem] border px-5 py-4 text-left text-sm font-black transition ${
+                  isAuctionCase
+                    ? "border-cyan-300/70 bg-cyan-300/10 text-white"
+                    : "border-white/10 bg-slate-950/40 text-slate-300"
+                }`}
+              >
+                Compra / subasta
+                <span className="mt-1 block text-xs font-medium leading-5 text-slate-400">
+                  Aplica cuando existe invoice, factura, documento de subasta o
+                  valor de compra para revisión.
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSelectPersonalCase}
+                className={`rounded-[1.4rem] border px-5 py-4 text-left text-sm font-black transition ${
+                  isPersonalCase
+                    ? "border-cyan-300/70 bg-cyan-300/10 text-white"
+                    : "border-white/10 bg-slate-950/40 text-slate-300"
+                }`}
+              >
+                Uso personal
+                <span className="mt-1 block text-xs font-medium leading-5 text-slate-400">
+                  Aplica cuando no se usará valor de subasta como base principal
+                  y se revisa contra referencia SAT.
+                </span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isAuctionCase && (
+          <div className="rounded-[1.7rem] border border-white/10 bg-white/[0.06] p-5">
+            <p className="text-sm font-black text-white">
+              ¿Tiene factura, invoice o documento de subasta?
+            </p>
+
+            <p className="mt-1 text-xs leading-5 text-slate-400">
+              Si existe documento, se puede ingresar el valor para compararlo
+              contra la referencia SAT. La validación final la hace Ronaldo.
+            </p>
+
+            <div className="mt-4 grid gap-3">
+              <button
+                type="button"
+                onClick={handleSupportingDocumentYes}
+                className={`rounded-[1.4rem] border px-5 py-4 text-left text-sm font-black transition ${
+                  hasSupportingDocument
+                    ? "border-cyan-300/70 bg-cyan-300/10 text-white"
+                    : "border-white/10 bg-slate-950/40 text-slate-300"
+                }`}
+              >
+                Sí, tengo documento de respaldo
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSupportingDocumentNo}
+                className={`rounded-[1.4rem] border px-5 py-4 text-left text-sm font-black transition ${
+                  doesNotHaveSupportingDocument
+                    ? "border-cyan-300/70 bg-cyan-300/10 text-white"
+                    : "border-white/10 bg-slate-950/40 text-slate-300"
+                }`}
+              >
+                No, revisar con referencia SAT
+              </button>
+            </div>
+          </div>
+        )}
+
+        {shouldAskAuctionValue && (
+          <InputPanel
+            label="Valor de factura / subasta"
+            helper="Ingresa el valor documentado en dólares. El sistema lo compara contra la referencia SAT como apoyo."
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-lg font-black text-cyan-300">$</span>
+
+              <input
+                value={auctionValueUSD}
+                onChange={(event) =>
+                  onChangeAuctionValueUSD(event.target.value)
+                }
+                inputMode="decimal"
+                placeholder="3750"
+                className="w-full bg-transparent text-lg font-black text-white outline-none placeholder:text-slate-600"
+              />
+
+              <span className="text-xs font-bold text-slate-500">USD</span>
+            </div>
+          </InputPanel>
+        )}
+
+        {shouldAskVehicleData && (
+          <div className="rounded-[1.7rem] border border-white/10 bg-white/[0.06] p-5">
+            <p className="text-sm font-black text-white">
+              Datos del vehículo para referencia SAT
+            </p>
+
+            <p className="mt-1 text-xs leading-5 text-slate-400">
+              Completa los datos en orden. Primero año, luego marca, después
+              línea/modelo y versión si aplica.
+            </p>
+
+            <div className="mt-5 grid gap-4">
+              <InputPanel
+                label="Año"
+                helper="Año modelo del vehículo."
+              >
+                <input
+                  value={vehicleYear}
+                  onChange={(event) => setVehicleYear(event.target.value)}
+                  inputMode="numeric"
+                  placeholder="2018"
+                  className="w-full bg-transparent text-lg font-black text-white outline-none placeholder:text-slate-600"
+                />
+              </InputPanel>
+
+              {vehicleYear.trim().length >= 4 && (
+                <InputPanel
+                  label="Marca"
+                  helper="Ejemplo: Toyota, Honda, Chevrolet, Ford."
+                >
+                  <input
+                    value={vehicleMake}
+                    onChange={(event) => setVehicleMake(event.target.value)}
+                    placeholder="Toyota"
+                    className="w-full bg-transparent text-lg font-black text-white outline-none placeholder:text-slate-600"
+                  />
+                </InputPanel>
+              )}
+
+              {vehicleMake.trim().length > 1 && (
+                <InputPanel
+                  label="Línea / modelo"
+                  helper="Ejemplo: Corolla, Civic, Tacoma, Camaro."
+                >
+                  <input
+                    value={vehicleLine}
+                    onChange={(event) => setVehicleLine(event.target.value)}
+                    placeholder="Corolla"
+                    className="w-full bg-transparent text-lg font-black text-white outline-none placeholder:text-slate-600"
+                  />
+                </InputPanel>
+              )}
+
+              {vehicleLine.trim().length > 1 && (
+                <InputPanel
+                  label="Versión"
+                  helper="Opcional. Ejemplo: LE, LT, EX, Sport."
+                >
+                  <input
+                    value={vehicleVersion}
+                    onChange={(event) => setVehicleVersion(event.target.value)}
+                    placeholder="LE"
+                    className="w-full bg-transparent text-lg font-black text-white outline-none placeholder:text-slate-600"
+                  />
+                </InputPanel>
+              )}
+            </div>
           </div>
         )}
 
@@ -117,7 +341,8 @@ export function VinQuoteForm({
               <div className="flex justify-between gap-4 rounded-2xl bg-slate-950/40 px-4 py-3">
                 <span className="text-slate-400">Valor tabla SAT</span>
                 <span className="font-black text-white">
-                  Q{Number(satReference.satValueGtq).toLocaleString("es-GT", {
+                  Q
+                  {Number(satReference.satValueGtq).toLocaleString("es-GT", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
@@ -145,68 +370,13 @@ export function VinQuoteForm({
           </div>
         )}
 
-        {vinResult?.ok && (
-          <>
-            <InputPanel
-              label="Valor compra / subasta"
-              helper="Ingresa el valor documentado en dólares para comparar escenarios."
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-lg font-black text-cyan-300">$</span>
-                <input
-                  value={auctionValueUSD}
-                  onChange={(event) =>
-                    onChangeAuctionValueUSD(event.target.value)
-                  }
-                  inputMode="decimal"
-                  placeholder="3750"
-                  className="w-full bg-transparent text-lg font-black text-white outline-none placeholder:text-slate-600"
-                />
-                <span className="text-xs font-bold text-slate-500">USD</span>
-              </div>
-            </InputPanel>
-
-            <div className="rounded-[1.7rem] border border-white/10 bg-white/[0.06] p-5">
-              <p className="text-sm font-black text-white">
-                ¿Tienes documento que respalde ese valor?
-              </p>
-
-              <p className="mt-1 text-xs leading-5 text-slate-400">
-                Puede ser invoice, documento de subasta u otro respaldo que
-                Ronaldo pueda revisar.
-              </p>
-
-              <div className="mt-4 grid gap-3">
-                <button
-                  onClick={() => onChangeSupportingDocument("yes")}
-                  className={`rounded-[1.4rem] border px-5 py-4 text-left text-sm font-black transition ${
-                    supportingDocument === "yes"
-                      ? "border-cyan-300/70 bg-cyan-300/10 text-white"
-                      : "border-white/10 bg-slate-950/40 text-slate-300"
-                  }`}
-                >
-                  Sí, tengo documento de respaldo
-                </button>
-
-                <button
-                  onClick={() => onChangeSupportingDocument("no")}
-                  className={`rounded-[1.4rem] border px-5 py-4 text-left text-sm font-black transition ${
-                    supportingDocument === "no"
-                      ? "border-cyan-300/70 bg-cyan-300/10 text-white"
-                      : "border-white/10 bg-slate-950/40 text-slate-300"
-                  }`}
-                >
-                  No, solo quiero una estimación
-                </button>
-              </div>
-            </div>
-
-            <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-sm leading-6 text-slate-400">
-              Tipo de cambio referencial:{" "}
-              <span className="font-black text-white">Q{EXCHANGE_RATE}</span>.
-              La validación final debe hacerla Ronaldo con documentos reales.
-            </div>
-          </>
+        {vinResult?.ok && vehicleOrigin && (
+          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-sm leading-6 text-slate-400">
+            Tipo de cambio referencial:{" "}
+            <span className="font-black text-white">Q{EXCHANGE_RATE}</span>. La
+            validación final debe hacerla Ronaldo con documentos reales y tabla
+            SAT aplicable.
+          </div>
         )}
       </div>
     </div>

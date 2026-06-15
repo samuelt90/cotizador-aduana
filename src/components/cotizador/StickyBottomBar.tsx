@@ -7,7 +7,7 @@ import type { Vehicle } from "@/types/vehicle";
 type StickyBottomBarProps = {
   screen: ScreenState;
   method: QuoteMethod | null;
-  selectedVehicle: Vehicle;
+  selectedVehicle: Vehicle | null;
   selectedVehicleId: string;
   auctionValueUSD: number;
   lowestEstimate: number;
@@ -40,10 +40,10 @@ export function StickyBottomBar({
       ? "Tabla SAT seleccionada"
       : "Elige cómo cotizar";
 
-  const formLabel =
-    method === "vin"
-      ? `Subasta: ${formatUSD(auctionValueUSD)}`
-      : selectedVehicleId
+const formLabel =
+  method === "vin"
+    ? `Subasta: ${formatUSD(auctionValueUSD)}`
+    : selectedVehicleId && selectedVehicle
       ? `${selectedVehicle.brand} ${selectedVehicle.line}`
       : "Completa los datos";
 
