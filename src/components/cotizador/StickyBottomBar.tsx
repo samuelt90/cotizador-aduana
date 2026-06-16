@@ -42,10 +42,15 @@ export function StickyBottomBar({
 
 const formLabel =
   method === "vin"
-    ? `Subasta: ${formatUSD(auctionValueUSD)}`
+    ? "Completa la revisión por VIN"
     : selectedVehicleId && selectedVehicle
       ? `${selectedVehicle.brand} ${selectedVehicle.line}`
       : "Completa los datos";
+
+ const formValueLabel =
+  auctionValueUSD > 0
+    ? `Valor ingresado: ${formatUSD(auctionValueUSD)}`
+    : "Ingresa los datos solicitados";     
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[#050b14]/85 px-4 pb-4 pt-3 backdrop-blur-2xl">
@@ -59,7 +64,7 @@ const formLabel =
 
           <p className="mt-1 truncate text-base font-black text-white">
             {screen === "method" && "Configura tu cotización"}
-            {screen === "form" && `Valor: ${formatUSD(auctionValueUSD)}`}
+            {screen === "form" && formValueLabel}
             {screen === "result" && `Desde ${formatGTQ(lowestEstimate)}`}
           </p>
         </div>

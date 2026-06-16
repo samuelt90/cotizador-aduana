@@ -162,68 +162,70 @@ export function buildVinReviewWhatsappMessage({
   const caseTypeLabel =
     caseType === "auction" ? "Compra / subasta" : "Uso personal";
 
-  const documentLabel =
-    hasSupportingDocument === true
-      ? "Sí"
-      : hasSupportingDocument === false
-        ? "No"
-        : "No indicado";
-
-  const invoiceLabel =
-    invoiceValueUSD && invoiceValueUSD > 0
-      ? formatUSD(invoiceValueUSD)
-      : "No ingresado";
-
   const detectedVehicleLabel = formatDetectedVehicle(detectedVehicle);
 
-  const technicalData = detectedVehicle
-    ? [
-        `Tipo detectado: ${formatNullable(detectedVehicle.vehicleType)}`,
-        `Carrocería: ${formatNullable(detectedVehicle.bodyClass)}`,
-        `Motor: ${
-          detectedVehicle.engineCc
-            ? `${Math.round(detectedVehicle.engineCc)}cc aprox.`
-            : "No indicado"
-        }`,
-        `Cilindros: ${formatNullable(detectedVehicle.cylinders)}`,
-        `Combustible: ${formatNullable(detectedVehicle.fuelType)}`,
-        `Puertas: ${formatNullable(detectedVehicle.doors)}`,
-        `Asientos: ${formatNullable(detectedVehicle.seats)}`,
-      ].join("\n")
-    : "No se obtuvieron datos técnicos del VIN.";
-
-  const manualData = [
-    `Año: ${manualVehicle.year || "No indicado"}`,
-    `Marca: ${manualVehicle.brand || "No indicado"}`,
-    `Línea/modelo: ${manualVehicle.line || "No indicado"}`,
-    `Versión: ${manualVehicle.version || "No indicado"}`,
-  ].join("\n");
-
-  return [
+  const lines: string[] = [
     "Hola Ronaldo, quiero revisar este caso por VIN.",
     "",
-    "*DATOS DEL CLIENTE*",
-    `Nombre: ${customerName || "No indicado"}`,
-    "",
-    "*DATOS DEL VIN*",
-    `VIN: ${vin || "No indicado"}`,
-    `Vehículo detectado: ${detectedVehicleLabel}`,
-    technicalData,
-    "",
-    "*REFERENCIA SAT*",
-    "El cotizador detectó el vehículo por VIN, pero no encontró una referencia SAT probable cargada en la base actual.",
-    "",
-    "*DATOS DEL CASO*",
-    `Tipo de caso: ${caseTypeLabel}`,
-    `Tiene factura o respaldo: ${documentLabel}`,
-    `Valor indicado: ${invoiceLabel}`,
-    "",
-    "*DATOS INGRESADOS MANUALMENTE*",
-    manualData,
-    "",
-    "*OBSERVACIÓN*",
-    "Solicito revisar manualmente qué referencia SAT corresponde para este vehículo y confirmar si se puede preparar una estimación.",
-  ].join("\n");
+  ];
+
+  if (customerName.trim().length > 0) {
+    lines.push(`*Cliente:* ${customerName}`);
+  }
+
+  lines.push(`*VIN:* ${vin || "No indicado"}`);
+  lines.push(`*Vehículo detectado por VIN:* ${detectedVehicleLabel}`);
+  lines.push("");
+
+  lines.push(
+    "El cotizador identificó el vehículo, pero no encontró una referencia SAT probable cargada en la base actual."
+  );
+
+  lines.push("");
+  lines.push(`*Tipo de caso:* ${caseTypeLabel}`);
+
+  if (hasSupportingDocument === true) {
+    lines.push("*Tiene factura o respaldo:* Sí");
+
+    if (invoiceValueUSD && invoiceValueUSD > 0) {
+      lines.push(`*Valor indicado:* ${formatUSD(invoiceValueUSD)}`);
+    }
+  }
+
+  if (hasSupportingDocument === false) {
+    lines.push("*Tiene factura o respaldo:* No");
+  }
+
+  const manualData: string[] = [];
+
+  if (manualVehicle.year.trim().length > 0) {
+    manualData.push(`Año: ${manualVehicle.year}`);
+  }
+
+  if (manualVehicle.brand.trim().length > 0) {
+    manualData.push(`Marca: ${manualVehicle.brand}`);
+  }
+
+  if (manualVehicle.line.trim().length > 0) {
+    manualData.push(`Línea/modelo: ${manualVehicle.line}`);
+  }
+
+  if (manualVehicle.version.trim().length > 0) {
+    manualData.push(`Versión: ${manualVehicle.version}`);
+  }
+
+  if (manualData.length > 0) {
+    lines.push("");
+    lines.push("*Datos ingresados por el cliente:*");
+    lines.push(...manualData);
+  }
+
+  lines.push("");
+  lines.push(
+    "Por favor revisar manualmente el VIN y confirmar qué referencia SAT corresponde antes de preparar una estimación."
+  );
+
+  return lines.join("\n");
 }
 
 export function buildVinReviewWhatsappUrl(params: VinReviewWhatsappParams) {

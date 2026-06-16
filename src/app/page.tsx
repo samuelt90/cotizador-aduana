@@ -34,7 +34,7 @@ export default function Home() {
     useState<SupportingDocumentStatus>(null);
 
   const [vin, setVin] = useState("");
-  const [auctionValueUSD, setAuctionValueUSD] = useState("3750");
+  const [auctionValueUSD, setAuctionValueUSD] = useState("");
 
   const [vinResult, setVinResult] = useState<VinDecodeResponse | null>(null);
   const [loadingVin, setLoadingVin] = useState(false);
@@ -289,9 +289,22 @@ const canCalculate =
   }, [screen]);
 
   function selectMethod(selectedMethod: QuoteMethod) {
-    setMethod(selectedMethod);
-    setSupportingDocument(null);
-  }
+  setMethod(selectedMethod);
+
+  setVin("");
+  setVinResult(null);
+  setSelectedVehicle(null);
+  setSupportingDocument(null);
+  setAuctionValueUSD("");
+
+  setSelectedType("");
+  setSelectedYear(null);
+  setSelectedBrand("");
+  setSelectedLine("");
+  setAvailableYears([]);
+  setAvailableBrands([]);
+  setAvailableLines([]);
+}
 
   function continueToForm() {
     if (!canContinueFromMethod) return;
