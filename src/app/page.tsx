@@ -10,7 +10,7 @@ import { vehicleTypes } from "@/data/demoSatVehicles";
 import { faqItems } from "@/data/faqItems";
 import { loadingSteps } from "@/data/loadingSteps";
 import { calculateQuote} from "@/lib/quoteCalculator";
-import { buildWhatsappUrl, buildWhatsappMessage } from "@/lib/whatsapp";
+import { buildWhatsappUrl, buildWhatsappMessage, buildVinReviewWhatsappUrl } from "@/lib/whatsapp";
 import type { QuoteMethod, ScreenState, SupportingDocumentStatus } from "@/types/quote";
 import { WelcomeHero } from "@/components/cotizador/WelcomeHero";
 import { QuoteMethodSelector } from "@/components/cotizador/QuoteMethodSelector";
@@ -258,11 +258,12 @@ const lowestEstimate = quote
 const canContinueFromMethod = method !== null;
 
 const canCalculate =
-    parsedAuctionValueUSD > 0 &&
-    supportingDocument !== null &&
-    (method === "vin"
-      ? vin.trim().length > 0
-      : selectedVehicleForQuote !== null && selectedLine.length > 0);
+  parsedAuctionValueUSD > 0 &&
+  supportingDocument !== null &&
+  selectedVehicleForQuote !== null &&
+  (method === "vin"
+    ? vin.trim().length > 0
+    : selectedLine.length > 0);
 
   useEffect(() => {
     if (screen !== "loading") return;
@@ -468,24 +469,38 @@ if (screen === "whatsapp") {
           </div>
         )}
 
-        {screen === "form" && method === "vin" && (
-            <VinQuoteForm
-              vin={vin}
-              auctionValueUSD={auctionValueUSD}
-              supportingDocument={supportingDocument}
-              vinResult={vinResult}
-              loadingVin={loadingVin}
-              onChangeVin={(value) => {
-                setVin(value);
-                setVinResult(null);
-                setSelectedVehicle(null);
-                setSupportingDocument(null);
-              }}
-              onDecodeVin={handleDecodeVin}
-              onChangeAuctionValueUSD={setAuctionValueUSD}
-              onChangeSupportingDocument={setSupportingDocument}
-            />
-          )}
+      {screen === "form" && method === "vin" && (
+  <VinQuoteForm
+    vin={vin}
+    auctionValueUSD={auctionValueUSD}
+    supportingDocument={supportingDocument}
+    vinResult={vinResult}
+    loadingVin={loadingVin}
+    onChangeVin={(value) => {
+      setVin(value);
+      setVinResult(null);
+      setSelectedVehicle(null);
+      setSupportingDocument(null);
+    }}
+    onDecodeVin={handleDecodeVin}
+    onChangeAuctionValueUSD={setAuctionValueUSD}
+    onChangeSupportingDocument={setSupportingDocument}
+    onSendVinReview={(payload) => {
+  const reviewUrl = buildVinReviewWhatsappUrl({
+    customerName,
+    vin,
+    caseType: payload.caseType,
+    hasSupportingDocument: payload.hasSupportingDocument,
+    invoiceValueUSD: payload.invoiceValueUSD,
+    detectedVehicle: vinResult?.ok ? vinResult.vehicle : null,
+    manualVehicle: payload.manualVehicle,
+  });
+
+  window.open(reviewUrl, "_blank", "noopener,noreferrer");
+}}
+  />
+)}
+
 
         {screen === "form" && method === "sat" && (
        <SatSearchForm

@@ -15,9 +15,23 @@ type VinQuoteFormProps = {
   onDecodeVin: () => void;
   onChangeAuctionValueUSD: (value: string) => void;
   onChangeSupportingDocument: (value: SupportingDocumentStatus) => void;
+  onSendVinReview: (payload: VinReviewPayload) => void;
 };
 
 type VehicleOrigin = "auction" | "personal" | null;
+
+type VinReviewPayload = {
+  caseType: "auction" | "personal";
+  hasSupportingDocument: boolean | null;
+  invoiceValueUSD: number | null;
+  manualVehicle: {
+    year: string;
+    brand: string;
+    line: string;
+    version: string;
+  };
+};
+
 
 export function VinQuoteForm({
   vin,
@@ -29,6 +43,7 @@ export function VinQuoteForm({
   onDecodeVin,
   onChangeAuctionValueUSD,
   onChangeSupportingDocument,
+  onSendVinReview,
 }: VinQuoteFormProps) {
   const [vehicleOrigin, setVehicleOrigin] = useState<VehicleOrigin>(null);
 
@@ -71,6 +86,30 @@ export function VinQuoteForm({
     onChangeSupportingDocument("no");
     onChangeAuctionValueUSD("");
   }
+
+ function handleSendVinReview() {
+  if (!vehicleOrigin) return;
+
+  onSendVinReview({
+    caseType: vehicleOrigin,
+    hasSupportingDocument:
+      supportingDocument === "yes"
+        ? true
+        : supportingDocument === "no"
+          ? false
+          : null,
+    invoiceValueUSD:
+      auctionValueUSD.trim().length > 0 ? Number(auctionValueUSD) : null,
+    manualVehicle: {
+      year: vehicleYear,
+      brand: vehicleMake,
+      line: vehicleLine,
+      version: vehicleVersion,
+    },
+  });
+}
+
+
 
   return (
     <div className="animate-[fadeUp_0.45s_ease-out]">
@@ -361,14 +400,31 @@ export function VinQuoteForm({
             </p>
           </div>
         )}
+            {vinResult?.ok && !satReference && (
+  <div className="rounded-[1.5rem] border border-amber-300/20 bg-amber-300/10 p-5 text-sm leading-6 text-amber-100">
+    <p className="font-semibold">Vehículo detectado por VIN.</p>
 
-        {vinResult?.ok && !satReference && (
-          <div className="rounded-[1.5rem] border border-amber-300/20 bg-amber-300/10 p-5 text-sm leading-6 text-amber-100">
-            El VIN fue identificado, pero no se encontró una referencia SAT
-            probable en la tabla cargada. Ronaldo deberá validar el caso
-            manualmente.
-          </div>
-        )}
+    <p className="mt-2">
+      En este momento no tenemos una referencia SAT probable cargada para este
+      vehículo en la base del cotizador.
+    </p>
+
+    <p className="mt-2">
+      Ronaldo puede revisar el caso manualmente con el VIN, y confirmar qué
+      referencia corresponde antes de preparar una estimación.
+    </p>
+
+    {vehicleOrigin && (
+      <button
+        type="button"
+        onClick={handleSendVinReview}
+        className="mt-5 w-full rounded-[1.2rem] border border-amber-200/40 bg-amber-200/15 px-5 py-3 text-sm font-black text-amber-50 transition hover:bg-amber-200/25"
+      >
+        Enviar a Ronaldo para revisión
+      </button>
+    )}
+  </div>
+)}
 
         {vinResult?.ok && vehicleOrigin && (
           <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 text-sm leading-6 text-slate-400">

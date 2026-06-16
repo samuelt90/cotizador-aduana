@@ -98,3 +98,137 @@ export function buildWhatsappUrl(params: BuildWhatsappMessageParams) {
 
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`;
 }
+
+type VinReviewCaseType = "auction" | "personal";
+
+type VinReviewWhatsappParams = {
+  customerName: string;
+  vin: string;
+  caseType: VinReviewCaseType;
+  hasSupportingDocument: boolean | null;
+  invoiceValueUSD: number | null;
+  detectedVehicle: {
+    year: number | null;
+    make: string | null;
+    model: string | null;
+    trim: string | null;
+    bodyClass: string | null;
+    vehicleType: string | null;
+    engineCc: number | null;
+    cylinders: number | null;
+    fuelType: string | null;
+    doors: number | null;
+    seats: number | null;
+  } | null;
+  manualVehicle: {
+    year: string;
+    brand: string;
+    line: string;
+    version: string;
+  };
+};
+
+function formatNullable(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === "") {
+    return "No indicado";
+  }
+
+  return String(value);
+}
+
+function formatDetectedVehicle(
+  vehicle: VinReviewWhatsappParams["detectedVehicle"]
+) {
+  if (!vehicle) {
+    return "No identificado";
+  }
+
+  const mainLabel = [vehicle.make, vehicle.model, vehicle.trim, vehicle.year]
+    .filter(Boolean)
+    .join(" ");
+
+  return mainLabel || "Vehículo detectado por VIN";
+}
+
+export function buildVinReviewWhatsappMessage({
+  customerName,
+  vin,
+  caseType,
+  hasSupportingDocument,
+  invoiceValueUSD,
+  detectedVehicle,
+  manualVehicle,
+}: VinReviewWhatsappParams) {
+  const caseTypeLabel =
+    caseType === "auction" ? "Compra / subasta" : "Uso personal";
+
+  const documentLabel =
+    hasSupportingDocument === true
+      ? "Sí"
+      : hasSupportingDocument === false
+        ? "No"
+        : "No indicado";
+
+  const invoiceLabel =
+    invoiceValueUSD && invoiceValueUSD > 0
+      ? formatUSD(invoiceValueUSD)
+      : "No ingresado";
+
+  const detectedVehicleLabel = formatDetectedVehicle(detectedVehicle);
+
+  const technicalData = detectedVehicle
+    ? [
+        `Tipo detectado: ${formatNullable(detectedVehicle.vehicleType)}`,
+        `Carrocería: ${formatNullable(detectedVehicle.bodyClass)}`,
+        `Motor: ${
+          detectedVehicle.engineCc
+            ? `${Math.round(detectedVehicle.engineCc)}cc aprox.`
+            : "No indicado"
+        }`,
+        `Cilindros: ${formatNullable(detectedVehicle.cylinders)}`,
+        `Combustible: ${formatNullable(detectedVehicle.fuelType)}`,
+        `Puertas: ${formatNullable(detectedVehicle.doors)}`,
+        `Asientos: ${formatNullable(detectedVehicle.seats)}`,
+      ].join("\n")
+    : "No se obtuvieron datos técnicos del VIN.";
+
+  const manualData = [
+    `Año: ${manualVehicle.year || "No indicado"}`,
+    `Marca: ${manualVehicle.brand || "No indicado"}`,
+    `Línea/modelo: ${manualVehicle.line || "No indicado"}`,
+    `Versión: ${manualVehicle.version || "No indicado"}`,
+  ].join("\n");
+
+  return [
+    "Hola Ronaldo, quiero revisar este caso por VIN.",
+    "",
+    "*DATOS DEL CLIENTE*",
+    `Nombre: ${customerName || "No indicado"}`,
+    "",
+    "*DATOS DEL VIN*",
+    `VIN: ${vin || "No indicado"}`,
+    `Vehículo detectado: ${detectedVehicleLabel}`,
+    technicalData,
+    "",
+    "*REFERENCIA SAT*",
+    "El cotizador detectó el vehículo por VIN, pero no encontró una referencia SAT probable cargada en la base actual.",
+    "",
+    "*DATOS DEL CASO*",
+    `Tipo de caso: ${caseTypeLabel}`,
+    `Tiene factura o respaldo: ${documentLabel}`,
+    `Valor indicado: ${invoiceLabel}`,
+    "",
+    "*DATOS INGRESADOS MANUALMENTE*",
+    manualData,
+    "",
+    "*OBSERVACIÓN*",
+    "Solicito revisar manualmente qué referencia SAT corresponde para este vehículo y confirmar si se puede preparar una estimación.",
+  ].join("\n");
+}
+
+export function buildVinReviewWhatsappUrl(params: VinReviewWhatsappParams) {
+  const message = buildVinReviewWhatsappMessage(params);
+  const encodedMessage = encodeURIComponent(message);
+
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`;
+}
